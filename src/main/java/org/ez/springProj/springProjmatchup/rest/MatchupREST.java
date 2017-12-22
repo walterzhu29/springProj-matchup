@@ -16,6 +16,7 @@ import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
+import org.ez.springProj.springProjmatchup.query.GoogleCalendarService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -37,81 +38,81 @@ import java.util.List;
 public class MatchupREST {
     private final static Logger logger = LoggerFactory.getLogger(MatchupREST.class);
 
-    /** Application name. */
-    private static final String APPLICATION_NAME =
-            "springProj-matchup";
-
-    /** Directory to store user credentials for this application. */
-    private static final java.io.File DATA_STORE_DIR = new java.io.File(
-            System.getProperty("user.home"), "desktop/springProj-matchup");
-
-    /** Global instance of the {@link FileDataStoreFactory}. */
-    private static FileDataStoreFactory DATA_STORE_FACTORY;
-
-    /** Global instance of the JSON factory. */
-    private static final JsonFactory JSON_FACTORY =
-            JacksonFactory.getDefaultInstance();
-
-    /** Global instance of the HTTP transport. */
-    private static HttpTransport HTTP_TRANSPORT;
-
-    /** Global instance of the scopes required by this quickstart.
-     *
-     * If modifying these scopes, delete your previously saved credentials
-     * at ~/.credentials/calendar-java-quickstart
-     */
-    private static final List<String> SCOPES =
-            Arrays.asList(CalendarScopes.CALENDAR_READONLY);
-
-    static {
-        try {
-            HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-            DATA_STORE_FACTORY = new FileDataStoreFactory(DATA_STORE_DIR);
-        } catch (Throwable t) {
-            t.printStackTrace();
-            System.exit(1);
-        }
-    }
-
-    /**
-     * Creates an authorized Credential object.
-     * @return an authorized Credential object.
-     * @throws IOException
-     */
-    public static Credential authorize() throws IOException {
-        // Load client secrets.
-        InputStream in =
-                MatchupREST.class.getResourceAsStream("/client_secret.json");
-        GoogleClientSecrets clientSecrets =
-                GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
-
-        // Build flow and trigger user authorization request.
-        GoogleAuthorizationCodeFlow flow =
-                new GoogleAuthorizationCodeFlow.Builder(
-                        HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
-                        .setDataStoreFactory(DATA_STORE_FACTORY)
-                        .setAccessType("offline")
-                        .build();
-        Credential credential = new AuthorizationCodeInstalledApp(
-                flow, new LocalServerReceiver()).authorize("user");
-        System.out.println(
-                "Credentials saved to " + DATA_STORE_DIR.getAbsolutePath());
-        return credential;
-    }
-
-    /**
-     * Build and return an authorized Calendar client service.
-     * @return an authorized Calendar client service
-     * @throws IOException
-     */
-    public static com.google.api.services.calendar.Calendar
-    getCalendarService() throws IOException {
-        Credential credential = authorize();
-        return new com.google.api.services.calendar.Calendar.Builder(
-                HTTP_TRANSPORT, JSON_FACTORY, credential)
-                .setApplicationName(APPLICATION_NAME)
-                .build();
-    }
+//    /** Application name. */
+//    private static final String APPLICATION_NAME =
+//            "springProj-matchup";
+//
+//    /** Directory to store user credentials for this application. */
+//    private static final java.io.File DATA_STORE_DIR = new java.io.File(
+//            System.getProperty("user.home"), "desktop/springProj-matchup");
+//
+//    /** Global instance of the {@link FileDataStoreFactory}. */
+//    private static FileDataStoreFactory DATA_STORE_FACTORY;
+//
+//    /** Global instance of the JSON factory. */
+//    private static final JsonFactory JSON_FACTORY =
+//            JacksonFactory.getDefaultInstance();
+//
+//    /** Global instance of the HTTP transport. */
+//    private static HttpTransport HTTP_TRANSPORT;
+//
+//    /** Global instance of the scopes required by this quickstart.
+//     *
+//     * If modifying these scopes, delete your previously saved credentials
+//     * at ~/.credentials/calendar-java-quickstart
+//     */
+//    private static final List<String> SCOPES =
+//            Arrays.asList(CalendarScopes.CALENDAR_READONLY);
+//
+//    static {
+//        try {
+//            HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+//            DATA_STORE_FACTORY = new FileDataStoreFactory(DATA_STORE_DIR);
+//        } catch (Throwable t) {
+//            t.printStackTrace();
+//            System.exit(1);
+//        }
+//    }
+//
+//    /**
+//     * Creates an authorized Credential object.
+//     * @return an authorized Credential object.
+//     * @throws IOException
+//     */
+//    public static Credential authorize() throws IOException {
+//        // Load client secrets.
+//        InputStream in =
+//                MatchupREST.class.getResourceAsStream("/client_secret.json");
+//        GoogleClientSecrets clientSecrets =
+//                GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
+//
+//        // Build flow and trigger user authorization request.
+//        GoogleAuthorizationCodeFlow flow =
+//                new GoogleAuthorizationCodeFlow.Builder(
+//                        HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
+//                        .setDataStoreFactory(DATA_STORE_FACTORY)
+//                        .setAccessType("offline")
+//                        .build();
+//        Credential credential = new AuthorizationCodeInstalledApp(
+//                flow, new LocalServerReceiver()).authorize("user");
+//        System.out.println(
+//                "Credentials saved to " + DATA_STORE_DIR.getAbsolutePath());
+//        return credential;
+//    }
+//
+//    /**
+//     * Build and return an authorized Calendar client service.
+//     * @return an authorized Calendar client service
+//     * @throws IOException
+//     */
+//    public static com.google.api.services.calendar.Calendar
+//    getCalendarService() throws IOException {
+//        Credential credential = authorize();
+//        return new com.google.api.services.calendar.Calendar.Builder(
+//                HTTP_TRANSPORT, JSON_FACTORY, credential)
+//                .setApplicationName(APPLICATION_NAME)
+//                .build();
+//    }
     /**
      * give a calendarID,
      * @return a list of upcoming events.
@@ -125,11 +126,11 @@ public class MatchupREST {
         // Note: Do not confuse this class with the
         //   com.google.api.services.calendar.model.Calendar class.
         com.google.api.services.calendar.Calendar service =
-                getCalendarService();
+                GoogleCalendarService.getCalendarService();
 
         // List the next 10 events from the primary calendar.
         DateTime now = new DateTime(System.currentTimeMillis());
-        Events events = service.events().list(calendarId)
+        Events events = service.events().list("u9udoeo3tukabp92990sbe3c2s@group.calendar.google.com")
                 .setMaxResults(10)
                 .setTimeMin(now)
                 .setOrderBy("startTime")

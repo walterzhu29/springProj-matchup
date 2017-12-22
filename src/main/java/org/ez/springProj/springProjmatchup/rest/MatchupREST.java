@@ -14,12 +14,15 @@ import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -30,7 +33,7 @@ import java.util.List;
 
 
 @RestController
-@RequestMapping(value = "/Matchup")
+@RequestMapping(value = "/matchup")
 public class MatchupREST {
     private final static Logger logger = LoggerFactory.getLogger(MatchupREST.class);
 
@@ -77,7 +80,6 @@ public class MatchupREST {
      */
     public static Credential authorize() throws IOException {
         // Load client secrets.
-        System.out.println(MatchupREST.class.getResource("/"));
         InputStream in =
                 MatchupREST.class.getResourceAsStream("/client_secret.json");
         GoogleClientSecrets clientSecrets =
@@ -110,9 +112,15 @@ public class MatchupREST {
                 .setApplicationName(APPLICATION_NAME)
                 .build();
     }
-
-    @RequestMapping(value = "/listEvents")
-    public ResponseEntity listEvents() throws IOException {
+    /**
+     * give a calendarID,
+     * @return a list of upcoming events.
+     * @throws IOException
+     */
+    @ApiOperation(value = "upcoming-events", notes = "return upcoming events for the given calendar ID")
+    @ApiImplicitParam(paramType = "query", name = "calendarId", dataType = "String", required = true)
+    @RequestMapping(value = "/upcoming-events", method = RequestMethod.GET, produces = "application/json")
+    public ResponseEntity<List<Event>> getUpcomingEvents(@RequestParam(name = "calendarId") String calendarId) throws IOException {
         // Build a new authorized API client service.
         // Note: Do not confuse this class with the
         //   com.google.api.services.calendar.model.Calendar class.
@@ -121,7 +129,7 @@ public class MatchupREST {
 
         // List the next 10 events from the primary calendar.
         DateTime now = new DateTime(System.currentTimeMillis());
-        Events events = service.events().list("primary")
+        Events events = service.events().list(calendarId)
                 .setMaxResults(10)
                 .setTimeMin(now)
                 .setOrderBy("startTime")
@@ -129,23 +137,23 @@ public class MatchupREST {
                 .execute();
         List<Event> items = events.getItems();
         if (items.size() == 0) {
-            System.out.println("No upcoming events found.");
+            logger.info("No upcoming events found.");
         } else {
-            System.out.println("Upcoming events");
+            logger.info("Upcoming events:");
             for (Event event : items) {
                 DateTime start = event.getStart().getDateTime();
                 if (start == null) {
                     start = event.getStart().getDate();
                 }
-                System.out.printf("%s (%s)\n", event.getSummary(), start);
+                logger.info(event.getSummary(), start);
             }
         }
-        return new ResponseEntity(items, HttpStatus.OK);
+        return new ResponseEntity<>(items, HttpStatus.OK);
     }
 
-    @RequestMapping(value = "/hello")
-    public String hello() {
-        return "hello";
-    }
+    /**
+     * give calendarID and a time interval,
+     * @return a list busy infos
+     */
 
 }

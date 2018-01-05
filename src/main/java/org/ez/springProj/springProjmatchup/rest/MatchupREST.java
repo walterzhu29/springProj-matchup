@@ -1,11 +1,9 @@
 package org.ez.springProj.springProjmatchup.rest;
 
 
-import com.google.api.client.util.Data;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.*;
-import com.sun.xml.internal.xsom.impl.scd.Iterators;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
@@ -14,24 +12,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.text.DateFormat;
-import java.text.Format;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.TimeZone;
 
 
 @RestController
 @RequestMapping(value = "/matchup")
 public class MatchupREST {
     private final static Logger logger = LoggerFactory.getLogger(MatchupREST.class);
+
     /**
      * give a calendarID,
+     *
      * @return a list of upcoming events.
      * @throws IOException
      */
@@ -71,6 +74,7 @@ public class MatchupREST {
 
     /**
      * give calendarID and a time interval,
+     *
      * @return a list busy infos
      * @throws IOException
      */
@@ -82,8 +86,8 @@ public class MatchupREST {
     })
     @RequestMapping(value = "/busy-infos", method = RequestMethod.GET, produces = "application/json")
     public ResponseEntity<FreeBusyResponse> checkBusyInfos(@RequestParam(name = "calendarId") String calendarId,
-                                                 @RequestParam(name = "timeMin") String timeMin,
-                                                 @RequestParam(name = "timeMax") String timeMax) throws IOException, ParseException {
+                                                           @RequestParam(name = "timeMin") String timeMin,
+                                                           @RequestParam(name = "timeMax") String timeMax) throws IOException, ParseException {
 
 
         com.google.api.services.calendar.Calendar service =
@@ -94,14 +98,14 @@ public class MatchupREST {
         Date timeMa = df.parse(timeMax);
         DateTime endTime = new DateTime(timeMa, TimeZone.getDefault());
         FreeBusyRequest req = new FreeBusyRequest();
-        List<FreeBusyRequestItem> items= new ArrayList<FreeBusyRequestItem>();
+        List<FreeBusyRequestItem> items = new ArrayList<FreeBusyRequestItem>();
         FreeBusyRequestItem item = new FreeBusyRequestItem();
         item.setId(calendarId);
         items.add(item);
         req.setItems(items);
         req.setTimeMin(startTime);
         req.setTimeMax(endTime);
-        Calendar.Freebusy.Query fbq= service.freebusy().query(req);
+        Calendar.Freebusy.Query fbq = service.freebusy().query(req);
         FreeBusyResponse fbResponse = fbq.execute();
 
         return new ResponseEntity<>(fbResponse, HttpStatus.OK);

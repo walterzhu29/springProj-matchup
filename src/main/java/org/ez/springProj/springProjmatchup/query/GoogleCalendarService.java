@@ -9,47 +9,40 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.DateTime;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.calendar.CalendarScopes;
+import com.google.api.services.calendar.model.FreeBusyRequest;
+import com.google.api.services.calendar.model.FreeBusyRequestItem;
 import org.ez.springProj.springProjmatchup.rest.MatchupREST;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Arrays;
-import java.util.List;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
+@Service
 public class GoogleCalendarService {
     private static final Logger LOGGER = LoggerFactory.getLogger(GoogleCalendarService.class);
-    /** Application name. */
     private static final String APPLICATION_NAME =
             "springProj-matchup";
 
-    /** Directory to store user credentials for this application. */
     private static final java.io.File DATA_STORE_DIR = new java.io.File(
             System.getProperty("user.home"), "desktop/springProj-matchup");
-
-    /** Global instance of the {@link FileDataStoreFactory}. */
     private static FileDataStoreFactory DATA_STORE_FACTORY;
-
-    /** Global instance of the JSON factory. */
-    private static final JsonFactory JSON_FACTORY =
-            JacksonFactory.getDefaultInstance();
-
-    /** Global instance of the HTTP transport. */
+    private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
     private static HttpTransport HTTP_TRANSPORT;
-
-    /** Global instance of the scopes required by this quickstart.
-     *
-     * If modifying these scopes, delete your previously saved credentials
-     * at ~/.credentials/calendar-java-quickstart
-     */
-    private static final List<String> SCOPES =
-            Arrays.asList(CalendarScopes.CALENDAR_READONLY);
+    private static final List<String> SCOPES = Arrays.asList(CalendarScopes.CALENDAR_READONLY);
 
     static {
+        System.out.println("This is a static block");
         try {
             HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
             DATA_STORE_FACTORY = new FileDataStoreFactory(DATA_STORE_DIR);
@@ -61,10 +54,11 @@ public class GoogleCalendarService {
 
     /**
      * Creates an authorized Credential object.
+     *
      * @return an authorized Credential object.
      * @throws IOException
      */
-    public static Credential authorize() throws IOException {
+    public Credential authorize() throws IOException {
         // Load client secrets.
         InputStream in =
                 MatchupREST.class.getResourceAsStream("/client_secret.json");
@@ -87,10 +81,11 @@ public class GoogleCalendarService {
 
     /**
      * Build and return an authorized Calendar client service.
+     *
      * @return an authorized Calendar client service
      * @throws IOException
      */
-    public static com.google.api.services.calendar.Calendar
+    public com.google.api.services.calendar.Calendar
     getCalendarService() throws IOException {
         Credential credential = authorize();
         LOGGER.info("authorized Calendar client service builded");
@@ -98,5 +93,23 @@ public class GoogleCalendarService {
                 HTTP_TRANSPORT, JSON_FACTORY, credential)
                 .setApplicationName(APPLICATION_NAME)
                 .build();
+    }
+
+    public FreeBusyRequest getFreeBusyRequest(final String calendarId, final String timeMin, final String timeMax) throws ParseException {
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date timeMi = df.parse(timeMin);
+        DateTime startTime = new DateTime(timeMi, TimeZone.getDefault());
+        System.out.println(startTime);
+        Date timeMa = df.parse(timeMax);
+        DateTime endTime = new DateTime(timeMa, TimeZone.getDefault());
+        FreeBusyRequest req = new FreeBusyRequest();
+        List<FreeBusyRequestItem> items = new ArrayList<FreeBusyRequestItem>();
+        FreeBusyRequestItem item = new FreeBusyRequestItem();
+        item.setId(calendarId);
+        items.add(item);
+        req.setItems(items);
+        req.setTimeMin(startTime);
+        req.setTimeMax(endTime);
+        return req;
     }
 }

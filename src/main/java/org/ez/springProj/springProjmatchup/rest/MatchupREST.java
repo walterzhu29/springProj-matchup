@@ -2,11 +2,7 @@ package org.ez.springProj.springProjmatchup.rest;
 
 
 import com.google.api.client.util.DateTime;
-import com.google.api.services.calendar.Calendar;
-import com.google.api.services.calendar.model.Event;
-import com.google.api.services.calendar.model.Events;
-import com.google.api.services.calendar.model.FreeBusyRequest;
-import com.google.api.services.calendar.model.FreeBusyResponse;
+import com.google.api.services.calendar.model.*;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
@@ -23,10 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 
 @RestController
@@ -81,29 +74,96 @@ public class MatchupREST {
     }
 
     /**
-     * give calendarID and a time interval,
+     * give two calendarIDs and a time interval,
      *
-     * @return a list busy infos
+     * @return a list free times
      * @throws IOException
      */
-    @ApiOperation(value = "busy-infos", notes = "return busy infos for the given time interval")
+    @ApiOperation(value = "match-up", notes = "compare two calendars and return matching free times")
     @ApiImplicitParams({
-            @ApiImplicitParam(paramType = "query", name = "calendarId", dataType = "String", required = true),
+            @ApiImplicitParam(paramType = "query", name = "calendarId1", dataType = "String", required = true),
+            @ApiImplicitParam(paramType = "query", name = "calendarId2", dataType = "String", required = true),
             @ApiImplicitParam(paramType = "query", name = "timeMin", dataType = "String", required = true),
-            @ApiImplicitParam(paramType = "query", name = "timeMax", dataType = "String", required = true)
+            @ApiImplicitParam(paramType = "query", name = "timeMax", dataType = "String", required = true),
+            @ApiImplicitParam(paramType = "query", name = "timeZone", dataType = "String", required = true)
     })
-    @RequestMapping(value = "/busy-infos", method = RequestMethod.GET, produces = "application/json")
-    public ResponseEntity<FreeBusyResponse> checkBusyInfos(@RequestParam(name = "calendarId") String calendarId,
+    @RequestMapping(value = "/match-up", method = RequestMethod.GET, produces = "application/json")
+    public ResponseEntity<List<String>> matchUp(@RequestParam(name = "calendarId1") String calendarId1,
+                                                           @RequestParam(name = "calendarId2") String calendarId2,
                                                            @RequestParam(name = "timeMin") String timeMin,
-                                                           @RequestParam(name = "timeMax") String timeMax) throws IOException, ParseException {
-
-
-        com.google.api.services.calendar.Calendar service = googleCalendarService.getCalendarService();
-        FreeBusyRequest req = googleCalendarService.getFreeBusyRequest(calendarId, timeMin, timeMax);
-        Calendar.Freebusy.Query fbq = service.freebusy().query(req);
-        FreeBusyResponse fbResponse = fbq.execute();
-
-        return new ResponseEntity<>(fbResponse, HttpStatus.OK);
+                                                           @RequestParam(name = "timeMax") String timeMax,
+                                                           @RequestParam(name = "timeZone") String timeZone) throws IOException, ParseException {
+        FreeBusyResponse fbResponse1 = googleCalendarService.checkBusyInfos(calendarId1, timeMin, timeMax, timeZone);
+        FreeBusyResponse fbResponse2 = googleCalendarService.checkBusyInfos(calendarId2, timeMin, timeMax, timeZone);
+        DateTime startTime = fbResponse1.getTimeMin();
+        DateTime endTime = fbResponse1.getTimeMax();
+        ArrayList<TimePeriod> busyList = new ArrayList<TimePeriod>();
+        busyList.addAll(fbResponse1.getCalendars().get(calendarId1).getBusy());
+        busyList.addAll(fbResponse2.getCalendars().get(calendarId2).getBusy());
+        //sort busy times buy timeMin
+        Collections.sort(busyList, new Comparator<TimePeriod>() {
+            @Override
+            public int compare(TimePeriod o1, TimePeriod o2) {
+                long d1 = o1.getStart().getValue();
+                long d2 = o2.getStart().getValue();
+                if(d1 <= d2)
+                    return -1;
+                else
+                    return 1;
+            }
+        });
+        //search free times
+        List<String> resultList = new ArrayList<String>();
+        DateTime searchTime = startTime;
+        for(int i = 0; i < busyList.size(); i++) {
+            if(busyList.get(i).getStart().getValue() > searchTime.getValue()) {
+                //change time zone of result
+                String startTimeToString = searchTime.toString();
+                String endTimeToString = busyList.get(i).getStart().toString();
+                if(i == 0) {
+                    String result = "From "
+                            + googleCalendarService.convertTime(startTimeToString.substring(0, 18),
+                            "GMT",
+                            timeZone)
+                            + " to "
+                            + googleCalendarService.convertTime(endTimeToString.substring(0, 18),
+                            "EST",
+                            timeZone);
+                    resultList.add(result);
+                }
+                else {
+                    String result = "From "
+                            + googleCalendarService.convertTime(startTimeToString.substring(0, 18),
+                            "EST",
+                            timeZone)
+                            + " to "
+                            + googleCalendarService.convertTime(endTimeToString.substring(0, 18),
+                            "EST",
+                            timeZone);
+                    resultList.add(result);
+                }
+            }
+            if(searchTime.getValue() < busyList.get(i).getEnd().getValue())
+                searchTime = busyList.get(i).getEnd();
+        }
+        if(searchTime.getValue() < endTime.getValue()) {
+            String startTimeToString = searchTime.toString();
+            String endTimeToString = endTime.toString();
+            String result = "From "
+                    + googleCalendarService.convertTime(startTimeToString.substring(0, 18),
+                    "EST",
+                    timeZone)
+                    + " to "
+                    + googleCalendarService.convertTime(endTimeToString.substring(0, 18),
+                    "GMT",
+                    timeZone);
+            resultList.add(result);
+            searchTime = endTime;
+        }
+        if(resultList.size() == 0)
+            return new ResponseEntity<>(Collections.emptyList(), HttpStatus.NO_CONTENT);
+        else
+            return new ResponseEntity<>(resultList, HttpStatus.OK);
     }
 
 }

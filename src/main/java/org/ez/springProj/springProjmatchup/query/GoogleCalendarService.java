@@ -11,18 +11,23 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.DateTime;
 import com.google.api.client.util.store.FileDataStoreFactory;
+import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.FreeBusyRequest;
 import com.google.api.services.calendar.model.FreeBusyRequestItem;
+import com.google.api.services.calendar.model.FreeBusyResponse;
 import org.ez.springProj.springProjmatchup.rest.MatchupREST;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.sql.Time;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -95,13 +100,13 @@ public class GoogleCalendarService {
                 .build();
     }
 
-    public FreeBusyRequest getFreeBusyRequest(final String calendarId, final String timeMin, final String timeMax) throws ParseException {
+    public static FreeBusyRequest getFreeBusyRequest(final String calendarId, final String timeMin, final String timeMax, String timeZone) throws ParseException {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        TimeZone tz = TimeZone.getTimeZone(timeZone);
         Date timeMi = df.parse(timeMin);
-        DateTime startTime = new DateTime(timeMi, TimeZone.getDefault());
-        System.out.println(startTime);
+        DateTime startTime = new DateTime(timeMi, tz);
         Date timeMa = df.parse(timeMax);
-        DateTime endTime = new DateTime(timeMa, TimeZone.getDefault());
+        DateTime endTime = new DateTime(timeMa, tz);
         FreeBusyRequest req = new FreeBusyRequest();
         List<FreeBusyRequestItem> items = new ArrayList<FreeBusyRequestItem>();
         FreeBusyRequestItem item = new FreeBusyRequestItem();
@@ -110,6 +115,33 @@ public class GoogleCalendarService {
         req.setItems(items);
         req.setTimeMin(startTime);
         req.setTimeMax(endTime);
+        req.setTimeZone(timeZone);
         return req;
+    }
+
+    public FreeBusyResponse checkBusyInfos(String calendarId,
+                                                           String timeMin,
+                                                           String timeMax,
+                                                           String timeZone) throws IOException, ParseException {
+        com.google.api.services.calendar.Calendar service = getCalendarService();
+        FreeBusyRequest req = getFreeBusyRequest(calendarId, timeMin, timeMax, timeZone);
+        Calendar.Freebusy.Query fbq = service.freebusy().query(req);
+        FreeBusyResponse fbResponse = fbq.execute();
+        return fbResponse;
+    }
+
+    public String convertTime(String inputDate,
+                              String inputTimeZone,
+                              String outputTimeZone) throws ParseException {
+        TimeZone timeZoneIp = TimeZone.getTimeZone(inputTimeZone);
+        TimeZone timeZoneOp = TimeZone.getTimeZone(outputTimeZone);
+        SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        SimpleDateFormat outputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        inputFormat.setTimeZone(timeZoneIp);
+        outputFormat.setTimeZone(timeZoneOp);
+        Date date = inputFormat.parse(inputDate);
+        String result = outputFormat.format(date).toString();
+        return result;
+
     }
 }

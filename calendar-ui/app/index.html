@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" name="matchup" content="matchup two calendars' free time">
+  <script src="bower_components/angular/angular.min.js"></script>
+  <link type="text/css" rel="stylesheet" href="app.css">
+</head>
+<body style="background-color: aliceblue;">
+
+<div class="index-container">
+  <div class="index-header">
+    <h1>Matchup</h1>
+  </div>
+  <div class="index-main">
+    <form ng-app="mainForm" ng-controller="formController">
+      First calendar: <input type="text" ng-model="calendarId1"><br>
+      Second calendar: <input type="text" ng-model="calendarId2"><br>
+      Start time: <input type="text" ng-model="timeMin"><br>
+      End time: <input type="text" ng-model="timeMax"><br>
+      <button ng-click="myClick()">MatchUp</button>
+      <p>test: {{test}}</p>
+    </form>
+  </div>
+</div>
+<script>
+    var app = angular.module('mainForm', []);
+
+    app.controller('formController', function ($scope) {
+        $scope.test = "aaa";
+        $scope.myClick = function () {
+            $scope.test = $scope.calendarId1;
+        };
+    });
+</script>
+</body>
+<footer></footer>
+</html>

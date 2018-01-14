@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -79,6 +80,7 @@ public class MatchupREST {
      * @return a list free times
      * @throws IOException
      */
+    @CrossOrigin(origins = "http://localhost:63342")
     @ApiOperation(value = "match-up", notes = "compare two calendars and return matching free times")
     @ApiImplicitParams({
             @ApiImplicitParam(paramType = "query", name = "calendarId1", dataType = "String", required = true),
@@ -165,5 +167,4 @@ public class MatchupREST {
         else
             return new ResponseEntity<>(resultList, HttpStatus.OK);
     }
-
 }

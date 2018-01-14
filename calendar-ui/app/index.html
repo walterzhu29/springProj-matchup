@@ -12,26 +12,22 @@
     <h1>Matchup</h1>
   </div>
   <div class="index-main">
-    <form ng-app="mainForm" ng-controller="formController">
+    <form  ng-app="mainform" ng-controller="formController">
       First calendar: <input type="text" ng-model="calendarId1"><br>
       Second calendar: <input type="text" ng-model="calendarId2"><br>
       Start time: <input type="text" ng-model="timeMin"><br>
       End time: <input type="text" ng-model="timeMax"><br>
-      <button ng-click="myClick()">MatchUp</button>
-      <p>test: {{test}}</p>
+      <select ng-model="timeZone">
+        <option value="EST">EST</option>
+        <option value="PST">PST</option>
+      </select>
+      <button ng-click="matchup()">MatchUp</button>
+      <p ng-repeat="record in Match_Result">{{record}}</p>
+      <p>{{test}}</p>
     </form>
   </div>
 </div>
-<script>
-    var app = angular.module('mainForm', []);
-
-    app.controller('formController', function ($scope) {
-        $scope.test = "aaa";
-        $scope.myClick = function () {
-            $scope.test = $scope.calendarId1;
-        };
-    });
-</script>
+<script src="app.js"></script>
 </body>
 <footer></footer>
 </html>

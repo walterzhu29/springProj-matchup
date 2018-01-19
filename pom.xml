@@ -97,11 +97,11 @@
 			<version>2.7.0</version>
 		</dependency>
 		<!--CROS-->
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>gs-rest-service-cors</artifactId>
-			<version>0.1.0</version>
-		</dependency>
+		<!--<dependency>-->
+			<!--<groupId>org.springframework</groupId>-->
+			<!--<artifactId>gs-rest-service-cors</artifactId>-->
+			<!--<version>0.1.0</version>-->
+		<!--</dependency>-->
 		<!--CROS end-->
 	</dependencies>
 

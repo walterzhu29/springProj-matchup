@@ -16,13 +16,11 @@ import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.FreeBusyRequest;
 import com.google.api.services.calendar.model.FreeBusyRequestItem;
 import com.google.api.services.calendar.model.FreeBusyResponse;
+import com.google.api.services.calendar.model.TimePeriod;
 import org.ez.springProj.springProjmatchup.rest.MatchupREST;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -100,9 +98,13 @@ public class GoogleCalendarService {
                 .build();
     }
 
-    public static FreeBusyRequest getFreeBusyRequest(final String calendarId, final String timeMin, final String timeMax, String timeZone) throws ParseException {
+    public static FreeBusyRequest getFreeBusyRequest(final String calendarId,
+                                                     final String timeMin,
+                                                     final String timeMax,
+                                                     final String timeZone) throws ParseException {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         TimeZone tz = TimeZone.getTimeZone(timeZone);
+        df.setTimeZone(tz);
         Date timeMi = df.parse(timeMin);
         DateTime startTime = new DateTime(timeMi, tz);
         Date timeMa = df.parse(timeMax);
@@ -119,10 +121,10 @@ public class GoogleCalendarService {
         return req;
     }
 
-    public FreeBusyResponse checkBusyInfos(String calendarId,
-                                                           String timeMin,
-                                                           String timeMax,
-                                                           String timeZone) throws IOException, ParseException {
+    public FreeBusyResponse checkBusyInfos(final String calendarId,
+                                           final String timeMin,
+                                           final String timeMax,
+                                           final String timeZone) throws IOException, ParseException {
         com.google.api.services.calendar.Calendar service = getCalendarService();
         FreeBusyRequest req = getFreeBusyRequest(calendarId, timeMin, timeMax, timeZone);
         Calendar.Freebusy.Query fbq = service.freebusy().query(req);
@@ -130,18 +132,98 @@ public class GoogleCalendarService {
         return fbResponse;
     }
 
-    public String convertTime(String inputDate,
-                              String inputTimeZone,
-                              String outputTimeZone) throws ParseException {
-        TimeZone timeZoneIp = TimeZone.getTimeZone(inputTimeZone);
+    /**
+     *
+     * @param inputDate
+     * @param outputTimeZone
+     * @return
+     * @throws ParseException
+     */
+    public String convertTime(final DateTime inputDate,
+                              final String outputTimeZone) throws ParseException {
         TimeZone timeZoneOp = TimeZone.getTimeZone(outputTimeZone);
-        SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        SimpleDateFormat outputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        inputFormat.setTimeZone(timeZoneIp);
-        outputFormat.setTimeZone(timeZoneOp);
-        Date date = inputFormat.parse(inputDate);
-        String result = outputFormat.format(date).toString();
-        return result;
+        Date date = new Date();
+        date.setTime(inputDate.getValue());
+        DateTime outputDate = new DateTime(date, timeZoneOp);
+        StringBuilder result = new StringBuilder(outputDate.toString().substring(0, 19));
+        result.setCharAt(10, ' ');
+        return result.toString();
+    }
 
+    /**
+     * match up free time from two calendars
+     * @param calendarId1
+     * @param calendarId2
+     * @param timeMin
+     * @param timeMax
+     * @param timeZone
+     * @return
+     * @throws IOException
+     * @throws ParseException
+     */
+    public List<String> matchFreeTime(final String calendarId1,
+                                      final String calendarId2,
+                                      final String timeMin,
+                                      final String timeMax,
+                                      final String timeZone) throws IOException, ParseException {
+        FreeBusyResponse fbResponse1 = checkBusyInfos(calendarId1, timeMin, timeMax, timeZone);
+        FreeBusyResponse fbResponse2 = checkBusyInfos(calendarId2, timeMin, timeMax, timeZone);
+        DateTime startTime = fbResponse1.getTimeMin();
+        DateTime endTime = fbResponse1.getTimeMax();
+        ArrayList<TimePeriod> busyList = new ArrayList<TimePeriod>();
+        busyList.addAll(fbResponse1.getCalendars().get(calendarId1).getBusy());
+        busyList.addAll(fbResponse2.getCalendars().get(calendarId2).getBusy());
+        //
+        List<String> resultList = new ArrayList<String>();
+        List<TimePeriod> freeTimeList = new ArrayList<TimePeriod>();
+        //if there are no busy item
+        if(busyList.size() == 0) {
+            String Result = "From "
+                    + convertTime(startTime, timeZone)
+                    + " to "
+                    + convertTime(endTime, timeZone);
+            resultList.add(Result);
+            return resultList;
+        }
+        //sort busy times buy timeMin
+        Collections.sort(busyList, new Comparator<TimePeriod>() {
+            @Override
+            public int compare(TimePeriod o1, TimePeriod o2) {
+                long d1 = o1.getStart().getValue();
+                long d2 = o2.getStart().getValue();
+                if(d1 <= d2)
+                    return -1;
+                else
+                    return 1;
+            }
+        });
+        //search free times
+        DateTime searchTime = startTime;
+        for(int i = 0; i < busyList.size(); i++) {
+            if(busyList.get(i).getStart().getValue() > searchTime.getValue()) {
+                TimePeriod curr = new TimePeriod();
+                curr.setStart(searchTime);
+                curr.setEnd(busyList.get(i).getStart());
+                freeTimeList.add(curr);
+            }
+            if(searchTime.getValue() < busyList.get(i).getEnd().getValue())
+                searchTime = busyList.get(i).getEnd();
+        }
+        if(searchTime.getValue() < endTime.getValue()) {
+            TimePeriod curr = new TimePeriod();
+            curr.setStart(searchTime);
+            curr.setEnd(endTime);
+            freeTimeList.add(curr);
+        }
+        //build resultList
+        for(int i = 0; i < freeTimeList.size(); i++) {
+            resultList.add(
+                    "From "
+                    + convertTime(freeTimeList.get(i).getStart(), timeZone)
+                    + " to "
+                    + convertTime(freeTimeList.get(i).getEnd(), timeZone)
+            );
+        }
+        return resultList;
     }
 }

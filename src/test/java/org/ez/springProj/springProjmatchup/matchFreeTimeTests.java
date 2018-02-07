@@ -65,10 +65,41 @@ public class matchFreeTimeTests {
         when(mockito.matchFreeTime(calendarId1, calendarId2, timeMin, timeMax, "EST")).thenCallRealMethod();
         //test method
         List<String> result = mockito.matchFreeTime(calendarId1, calendarId2, timeMin, timeMax, "EST");
-        String timeInterval = "From " + timeMin + " to " + timeMax;
-        List<String> rightResult = new ArrayList<String>();
-        rightResult.add(timeInterval);
+        String expectString = "From " + timeMin + " to " + timeMax;
+        List<String> expectResult = new ArrayList<String>();
+        expectResult.add(expectString);
         //verify result
-        assertThat(result, is(rightResult));
+        assertThat(result, is(expectResult));
+    }
+
+    /**
+     * test invalid time interval input case
+     */
+    @Test
+    public void testInvalidTimeIntervalCase() throws IOException, ParseException {
+        //input params
+        String timeMax = "2018-01-08 06:00:00";
+        String timeMin = "2018-01-08 10:00:00";
+        //mock
+        FreeBusyResponse fbResponse = new FreeBusyResponse();
+        //"2018-01-08 06:00:00 EST"
+        Date mockDateTimeMax = new Date(118, 0, 8, 6, 0, 0);
+        //"2018-01-08 10:00:00 EST"
+        Date mockDateTimeMin = new Date(118, 0, 8, 10, 0, 0);
+        DateTime mockTimeMin = new DateTime(mockDateTimeMin);
+        DateTime mockTimeMax = new DateTime(mockDateTimeMax);
+        fbResponse.setTimeMin(mockTimeMin);
+        fbResponse.setTimeMax(mockTimeMax);
+        when(mockito.checkBusyInfos(calendarId1, timeMin, timeMax, "EST")).thenReturn(fbResponse);
+        when(mockito.checkBusyInfos(calendarId2, timeMin, timeMax, "EST")).thenReturn(fbResponse);
+        when(mockito.convertTime(Matchers.any(DateTime.class), anyString())).thenCallRealMethod();
+        when(mockito.matchFreeTime(calendarId1, calendarId2, timeMin, timeMax, "EST")).thenCallRealMethod();
+        //test method
+        List<String> result = mockito.matchFreeTime(calendarId1, calendarId2, timeMin, timeMax, "EST");
+        String expectString = "Invalid Time Interval!";
+        List<String> expectResult = new ArrayList<String>();
+        expectResult.add(expectString);
+        //verify result
+        assertThat(result, is(expectResult));
     }
 }

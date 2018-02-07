@@ -170,19 +170,25 @@ public class GoogleCalendarService {
         FreeBusyResponse fbResponse2 = checkBusyInfos(calendarId2, timeMin, timeMax, timeZone);
         DateTime startTime = fbResponse1.getTimeMin();
         DateTime endTime = fbResponse1.getTimeMax();
-        ArrayList<TimePeriod> busyList = new ArrayList<TimePeriod>();
-        busyList.addAll(fbResponse1.getCalendars().get(calendarId1).getBusy());
-        busyList.addAll(fbResponse2.getCalendars().get(calendarId2).getBusy());
         //
         List<String> resultList = new ArrayList<String>();
         List<TimePeriod> freeTimeList = new ArrayList<TimePeriod>();
+        //if input interval is invalid
+        if(startTime.getValue() > endTime.getValue()) {
+            String result = "Invalid Time Interval!";
+            resultList.add(result);
+            return resultList;
+        }
         //if there are no busy item
+        ArrayList<TimePeriod> busyList = new ArrayList<TimePeriod>();
+        busyList.addAll(fbResponse1.getCalendars().get(calendarId1).getBusy());
+        busyList.addAll(fbResponse2.getCalendars().get(calendarId2).getBusy());
         if(busyList.size() == 0) {
-            String Result = "From "
+            String result = "From "
                     + convertTime(startTime, timeZone)
                     + " to "
                     + convertTime(endTime, timeZone);
-            resultList.add(Result);
+            resultList.add(result);
             return resultList;
         }
         //sort busy times buy timeMin
